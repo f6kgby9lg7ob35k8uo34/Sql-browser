@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SQL Query Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .query-area {
+            width: 100%;
+            min-height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .button-group {
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #0052a3;
+        }
+
+        .results {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .sample-queries {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .sample-query {
+            cursor: pointer;
+            color: #0066cc;
+            margin: 5px 0;
+        }
+
+        .sample-query:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SQL Query Simulator</h1>
+        
+        <div class="sample-queries">
+            <h3>Sample Queries:</h3>
+            <div class="sample-query">CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);</div>
+            <div class="sample-query">INSERT INTO users (name, email) VALUES ('John Doe', 'john@example.com');</div>
+            <div class="sample-query">SELECT * FROM users;</div>
+        </div>
+
+        <textarea id="queryInput" class="query-area" placeholder="Enter your SQL query here..."></textarea>
+        
+        <div class="button-group">
+            <button onclick="executeQuery()">Execute Query</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="error" class="error"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        let db;
+        
+        // Initialize SQL.js
+        initSqlJs({
+            locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        }).then(function(SQL) {
+            db = new SQL.Database();
+            console.log('SQLite database initialized');
+        }).catch(err => {
+            console.error(err);
+            showError('Failed to initialize SQLite database');
+        });
+
+        function executeQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                showError('Please enter a SQL query');
+                return;
+            }
+
+            try {
+                const results = db.exec(query);
+                hideError();
+                displayResults(results);
+            } catch (err) {
+                showError(err.message);
+                clearResults();
+            }
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (!results.length) {
+                resultsDiv.innerHTML = '<p>Query executed successfully. No results to display.</p>';
+                return;
+            }
+
+            results.forEach(result => {
+                const table = document.createElement('table');
+                
+                // Create header
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                result.columns.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column;
+                    headerRow.appendChild(th);
+                });
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Create body
+                const tbody = document.createElement('tbody');
+                result.values.forEach(row => {
+                    const tr = document.createElement('tr');
+                    row.forEach(cell => {
+                        const td = document.createElement('td');
+                        td.textContent = cell;
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+
+                resultsDiv.appendChild(table);
+            });
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            hideError();
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // Sample queries click handler
+        document.querySelectorAll('.sample-query').forEach(element => {
+            element.addEventListener('click', () => {
+                document.getElementById('queryInput').value = element.textContent;
+            });
+        });
+    </script>
+</body>
+</html>
